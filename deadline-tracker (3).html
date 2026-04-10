@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#0a0a0f"/>
+<title>Deadline Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #1e1e2e;
+    --accent: #ff4d6d;
+    --accent2: #ff9a3c;
+    --accent3: #4dffb4;
+    --text: #e8e8f0;
+    --muted: #555570;
+    --card: #0f0f18;
+  }
+
+  *, *::before, *::after {
+    margin: 0; padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html { font-size: 16px; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 40px;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -150px; left: -150px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(255,77,109,0.07) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -100px; right: -100px;
+    width: 350px; height: 350px;
+    background: radial-gradient(circle, rgba(77,255,180,0.05) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .header {
+    width: 100%;
+    padding: clamp(18px,5vw,36px) clamp(16px,5vw,28px) clamp(8px,2vw,16px);
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+  .header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2rem,9vw,3.2rem);
+    letter-spacing: clamp(4px,2vw,10px);
+    color: var(--text);
+    line-height: 1;
+  }
+  .header h1 span { color: var(--accent); }
+  .header p {
+    font-size: clamp(0.55rem,2.5vw,0.7rem);
+    color: var(--muted);
+    letter-spacing: clamp(2px,1vw,4px);
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .wrapper {
+    width: 100%;
+    max-width: 500px;
+    padding: 0 clamp(12px,4vw,20px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(12px,4vw,20px);
+    position: relative;
+    z-index: 1;
+  }
+
+  .setup-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: clamp(12px,4vw,18px);
+    padding: clamp(14px,4vw,22px);
+    position: relative;
+    overflow: hidden;
+  }
+  .setup-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .add-btn-top {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    border: none;
+    border-radius: clamp(8px,3vw,12px);
+    padding: clamp(13px,4vw,16px);
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.75rem,3.5vw,0.9rem);
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    text-transform: uppercase;
+    touch-action: manipulation;
+  }
+  .add-btn-top:active { transform: scale(0.97); opacity: 0.85; }
+
+  .form-area {
+    display: none;
+    flex-direction: column;
+    gap: clamp(10px,3vw,16px);
+    margin-top: clamp(12px,3vw,16px);
+  }
+  .form-area.open { display: flex; }
+
+  label {
+    font-size: clamp(0.58rem,2.5vw,0.68rem);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 6px;
+  }
+  .field-group { display: flex; flex-direction: column; }
+
+  input[type="text"], input[type="date"] {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: clamp(7px,2vw,10px);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.8rem,3.5vw,0.95rem);
+    padding: clamp(11px,3.5vw,14px) clamp(12px,3.5vw,16px);
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+    -webkit-appearance: none;
+  }
+  input:focus { border-color: var(--accent); }
+  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(8px,2.5vw,12px); }
+
+  .color-row { display: flex; gap: clamp(6px,2vw,10px); flex-wrap: wrap; }
+  .color-dot {
+    width: clamp(26px,7vw,32px);
+    height: clamp(26px,7vw,32px);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2.5px solid transparent;
+    transition: transform 0.15s, border-color 0.15s;
+    touch-action: manipulation;
+  }
+  .color-dot.active { border-color: #fff; transform: scale(1.2); }
+
+  .submit-btn {
+    background: var(--accent3);
+    color: #000;
+    border: none;
+    border-radius: clamp(8px,3vw,12px);
+    padding: clamp(12px,4vw,15px);
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.75rem,3vw,0.88rem);
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    touch-action: manipulation;
+  }
+  .submit-btn:active { transform: scale(0.97); }
+
+  .empty-state {
+    text-align: center;
+    padding: clamp(30px,10vw,50px) 20px;
+    color: var(--muted);
+  }
+  .empty-state .icon { font-size: clamp(2.5rem,10vw,3.5rem); margin-bottom: 12px; }
+  .empty-state p { font-size: clamp(0.75rem,3vw,0.88rem); letter-spacing: 1px; line-height: 1.7; }
+
+  .task-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: clamp(12px,4vw,18px);
+    padding: clamp(14px,4vw,20px);
+    position: relative;
+    overflow: hidden;
+    animation: slideIn 0.35s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .task-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-accent, var(--accent));
+  }
+
+  .task-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: clamp(10px,3vw,16px);
+    gap: 8px;
+  }
+  .task-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.1rem,5vw,1.5rem);
+    letter-spacing: 3px;
+    line-height: 1.1;
+    word-break: break-word;
+    flex: 1;
+  }
+  .delete-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: clamp(4px,1.5vw,7px) clamp(8px,2.5vw,12px);
+    font-size: clamp(0.62rem,2.5vw,0.75rem);
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+    touch-action: manipulation;
+  }
+  .delete-btn:active { border-color: var(--accent); color: var(--accent); }
+
+  .progress-section { margin-bottom: clamp(10px,3vw,16px); }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .progress-pct {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.9rem,8vw,2.8rem);
+    line-height: 1;
+    color: var(--card-accent, var(--accent));
+  }
+  .progress-status {
+    font-size: clamp(0.58rem,2.5vw,0.68rem);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .progress-track {
+    height: clamp(8px,2.5vw,12px);
+    background: var(--card);
+    border-radius: 99px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 1s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 2.5s infinite;
+  }
+  @keyframes shimmer { to { left: 200%; } }
+
+  .progress-track-complete {
+    height: clamp(8px,2.5vw,12px);
+    background: var(--card);
+    border-radius: 99px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin-top: clamp(5px,1.5vw,8px);
+  }
+  .progress-fill-complete {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 1s ease;
+    position: relative;
+    overflow: hidden;
+    opacity: 0.45;
+  }
+  .progress-fill-complete::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 2.5s infinite;
+  }
+  .complete-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: clamp(4px,1vw,6px);
+  }
+  .complete-txt {
+    font-size: clamp(0.52rem,2vw,0.62rem);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .complete-pct {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.62rem,2.5vw,0.72rem);
+    color: var(--card-accent, var(--accent));
+    opacity: 0.7;
+  }
+
+  .date-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: clamp(6px,2vw,10px);
+    margin-bottom: clamp(10px,3vw,16px);
+  }
+  .date-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: clamp(7px,2vw,10px);
+    padding: clamp(8px,2.5vw,12px) 4px;
+    text-align: center;
+  }
+  .date-box .val {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.68rem,3vw,0.85rem);
+    color: var(--text);
+    font-weight: 700;
+    display: block;
+  }
+  .date-box .lbl {
+    font-size: clamp(0.48rem,2vw,0.58rem);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 3px;
+    display: block;
+  }
+
+  .timeline-label {
+    font-size: clamp(0.52rem,2vw,0.65rem);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: clamp(6px,2vw,10px);
+  }
+  .timeline-wrapper { position: relative; }
+  .timeline-scroll {
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+    -webkit-overflow-scrolling: touch;
+    cursor: grab;
+  }
+  .timeline-scroll.dragging { cursor: grabbing; }
+  .timeline-scroll::-webkit-scrollbar { height: 4px; }
+  .timeline-scroll::-webkit-scrollbar-track { background: transparent; }
+  .timeline-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+  .scroll-info {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.5rem,2vw,0.6rem);
+    color: var(--muted);
+    text-align: right;
+    margin-top: 5px;
+  }
+  .timeline-inner {
+    display: flex;
+    gap: clamp(3px,1vw,5px);
+    min-width: max-content;
+    padding-bottom: 2px;
+  }
+  .day-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: clamp(28px,8vw,40px);
+  }
+  .day-num {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.42rem,1.8vw,0.55rem);
+    color: var(--muted);
+  }
+  .day-bar-wrap {
+    width: clamp(20px,6vw,28px);
+    height: clamp(38px,12vw,54px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+  .day-bar-fill {
+    width: 100%;
+    background: var(--card-accent, var(--accent));
+    border-radius: 2px;
+    opacity: 0.2;
+  }
+  .day-bar-fill.passed { opacity: 1; }
+  .day-bar-fill.today  { opacity: 1; box-shadow: 0 0 8px var(--card-accent, var(--accent)); }
+  .day-dot {
+    width: clamp(4px,1.5vw,6px);
+    height: clamp(4px,1.5vw,6px);
+    border-radius: 50%;
+    background: var(--border);
+  }
+  .day-dot.today { background: var(--card-accent, var(--accent)); }
+  .day-fraction {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.4rem,1.6vw,0.52rem);
+    color: var(--muted);
+  }
+  .day-fraction.today { color: var(--card-accent, var(--accent)); }
+
+  .urgency-badge {
+    display: inline-block;
+    padding: clamp(3px,1vw,5px) clamp(8px,3vw,12px);
+    border-radius: 99px;
+    font-size: clamp(0.52rem,2.2vw,0.65rem);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-top: clamp(10px,3vw,14px);
+  }
+  .urgency-safe   { background: rgba(77,255,180,0.12); color: var(--accent3); border: 1px solid rgba(77,255,180,0.3); }
+  .urgency-warn   { background: rgba(255,154,60,0.12);  color: var(--accent2); border: 1px solid rgba(255,154,60,0.3); }
+  .urgency-danger { background: rgba(255,77,109,0.12);  color: var(--accent);  border: 1px solid rgba(255,77,109,0.3); }
+  .urgency-done   { background: rgba(150,150,200,0.08); color: var(--muted);   border: 1px solid var(--border); }
+
+  .btn-row { display: flex; gap: 6px; flex-shrink: 0; }
+  .edit-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: clamp(4px,1.5vw,7px) clamp(8px,2.5vw,12px);
+    font-size: clamp(0.62rem,2.5vw,0.75rem);
+    transition: all 0.2s;
+    white-space: nowrap;
+    touch-action: manipulation;
+  }
+  .edit-btn:active { border-color: var(--accent2); color: var(--accent2); }
+
+  .edit-panel {
+    display: none;
+    flex-direction: column;
+    gap: clamp(10px,3vw,14px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: clamp(8px,3vw,12px);
+    padding: clamp(12px,3.5vw,16px);
+    margin-bottom: clamp(10px,3vw,14px);
+    animation: slideIn 0.25s ease;
+  }
+  .edit-panel.open { display: flex; }
+  .edit-panel-row { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(8px,2.5vw,12px); }
+  .edit-save-btn {
+    background: var(--accent2);
+    color: #000;
+    border: none;
+    border-radius: clamp(7px,2.5vw,10px);
+    padding: clamp(10px,3vw,13px);
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.72rem,3vw,0.85rem);
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .edit-save-btn:active { transform: scale(0.97); }
+
+  .done-overlay {
+    position: absolute; inset: 0;
+    background: rgba(10,10,15,0.82);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: clamp(12px,4vw,18px);
+    backdrop-filter: blur(3px);
+  }
+  .done-overlay .done-icon { font-size: clamp(2rem,8vw,2.8rem); }
+  .done-overlay .done-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1rem,4vw,1.3rem);
+    letter-spacing: 4px;
+    margin-top: 6px;
+    color: var(--accent3);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>DEAD<span>LINE</span></h1>
+  <p>Countdown Tracker</p>
+</div>
+
+<div class="wrapper">
+  <div class="setup-panel">
+    <button class="add-btn-top" onclick="toggleForm()">+ নতুন Deadline যোগ করো</button>
+    <div class="form-area" id="formArea">
+      <div class="field-group">
+        <label>কাজের নাম</label>
+        <input type="text" id="taskName" placeholder="যেমন: Project Submit"/>
+      </div>
+      <div class="form-row">
+        <div class="field-group">
+          <label>শুরুর তারিখ</label>
+          <input type="date" id="startDate"/>
+        </div>
+        <div class="field-group">
+          <label>শেষের তারিখ</label>
+          <input type="date" id="endDate"/>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>রঙ বেছে নাও</label>
+        <div class="color-row" id="colorRow"></div>
+      </div>
+      <button class="submit-btn" onclick="addTask()">✔ যোগ করো</button>
+    </div>
+  </div>
+
+  <div id="tasksContainer">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">⏳</div>
+      <p>কোনো Deadline নেই এখনো<br/>উপরে + বাটন চাপো</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .footer {
+    width: 100%;
+    text-align: center;
+    padding: clamp(16px,5vw,28px) 20px clamp(10px,3vw,16px);
+    margin-top: clamp(10px,3vw,20px);
+    border-top: 1px solid var(--border);
+    position: relative;
+    z-index: 1;
+  }
+  .footer-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1rem,4.5vw,1.4rem);
+    letter-spacing: 4px;
+    color: var(--text);
+  }
+  .footer-name span { color: var(--accent); }
+  .footer-sub {
+    font-size: clamp(0.52rem,2vw,0.62rem);
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+</style>
+
+<script>
+const COLORS = ['#ff4d6d','#ff9a3c','#4dffb4','#4db8ff','#c77dff','#ffeb3b','#ff6b6b','#00e5ff'];
+let selectedColor = COLORS[0];
+let tasks = JSON.parse(localStorage.getItem('dl_tasks_v2') || '[]');
+
+const today = new Date();
+const todayStr = today.toISOString().split('T')[0];
+document.getElementById('startDate').value = todayStr;
+const d7 = new Date(today); d7.setDate(d7.getDate() + 7);
+document.getElementById('endDate').value = d7.toISOString().split('T')[0];
+
+const cr = document.getElementById('colorRow');
+COLORS.forEach((c, i) => {
+  const dot = document.createElement('div');
+  dot.className = 'color-dot' + (i === 0 ? ' active' : '');
+  dot.style.background = c;
+  dot.onclick = () => {
+    document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+    dot.classList.add('active');
+    selectedColor = c;
+  };
+  cr.appendChild(dot);
+});
+
+function toggleForm() {
+  document.getElementById('formArea').classList.toggle('open');
+}
+
+function addTask() {
+  const name  = document.getElementById('taskName').value.trim();
+  const start = document.getElementById('startDate').value;
+  const end   = document.getElementById('endDate').value;
+  if (!name)      { alert('কাজের নাম দাও!'); return; }
+  if (!end)       { alert('শেষের তারিখ দাও!'); return; }
+  if (start >= end){ alert('শেষের তারিখ শুরুর পরে হওয়া দরকার!'); return; }
+  tasks.unshift({ id: Date.now(), name, start, end, color: selectedColor });
+  saveTasks(); renderTasks();
+  document.getElementById('taskName').value = '';
+  document.getElementById('formArea').classList.remove('open');
+}
+
+function enableDragScroll(el) {
+  let isDown = false, startX, scrollLeft;
+  el.addEventListener('mousedown', e => {
+    isDown = true; el.classList.add('dragging');
+    startX = e.pageX - el.offsetLeft;
+    scrollLeft = el.scrollLeft;
+  });
+  el.addEventListener('mouseleave', () => { isDown = false; el.classList.remove('dragging'); });
+  el.addEventListener('mouseup', () => { isDown = false; el.classList.remove('dragging'); });
+  el.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    el.scrollLeft = scrollLeft - (x - startX) * 1.2;
+  });
+}
+
+function toggleEdit(id) {
+  const panel = document.getElementById('edit-' + id);
+  if (panel) panel.classList.toggle('open');
+}
+
+function saveEdit(id) {
+  const start = document.getElementById('es-' + id).value;
+  const end   = document.getElementById('ee-' + id).value;
+  if (!start || !end) { alert('তারিখ দাও!'); return; }
+  if (start >= end)   { alert('শেষের তারিখ শুরুর পরে হওয়া দরকার!'); return; }
+  const task = tasks.find(t => t.id === id);
+  if (task) { task.start = start; task.end = end; }
+  saveTasks(); renderTasks();
+}
+
+function deleteTask(id) {
+  if (!confirm('এই Deadline মুছে দেবো?')) return;
+  tasks = tasks.filter(t => t.id !== id);
+  saveTasks(); renderTasks();
+}
+
+function saveTasks() { localStorage.setItem('dl_tasks_v2', JSON.stringify(tasks)); }
+
+function daysBetween(a, b) {
+  return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00')) / 86400000);
+}
+function fmtDate(str) {
+  const d = new Date(str+'T00:00:00');
+  return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+}
+function fmtShort(str) {
+  const d = new Date(str+'T00:00:00');
+  return `${d.getDate()}/${d.getMonth()+1}`;
+}
+
+function renderTasks() {
+  const container = document.getElementById('tasksContainer');
+  container.querySelectorAll('.task-card').forEach(c => c.remove());
+  const empty = document.getElementById('emptyState');
+  if (tasks.length === 0) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  const now = new Date().toISOString().split('T')[0];
+
+  tasks.forEach(task => {
+    const total  = daysBetween(task.start, task.end);
+    const passed = Math.max(0, Math.min(total, daysBetween(task.start, now)));
+    const remain = Math.max(0, total - passed);
+    const remPct = Math.round(((total - passed) / total) * 100);
+    const isDone = now >= task.end;
+
+    let urgClass, urgText;
+    if (isDone)          { urgClass='urgency-done';   urgText='✓ সময় শেষ'; }
+    else if (remPct > 60){ urgClass='urgency-safe';   urgText='🟢 নিরাপদ'; }
+    else if (remPct > 25){ urgClass='urgency-warn';   urgText='🟡 সাবধান'; }
+    else                 { urgClass='urgency-danger';  urgText='🔴 বিপদ!'; }
+
+    let tlHTML = '';
+    for (let i = 1; i <= total; i++) {
+      const d = new Date(task.start+'T00:00:00');
+      d.setDate(d.getDate() + i);
+      const dStr   = d.toISOString().split('T')[0];
+      const isT    = dStr === now;
+      const isPast = dStr < now;
+
+      let fillH = 8;
+      let fillCls = '';
+
+      if (isPast) {
+        fillH = 100;
+        fillCls = 'passed';
+      } else if (isT) {
+        fillCls = 'today';
+        // Calculate hours passed since 5 AM
+        const nowTime = new Date();
+        const fiveAM = new Date();
+        fiveAM.setHours(5, 0, 0, 0);
+        let hoursPassed = (nowTime - fiveAM) / (1000 * 60 * 60);
+        if (hoursPassed < 0) hoursPassed = 0;
+        if (hoursPassed > 24) hoursPassed = 24;
+        fillH = Math.round((hoursPassed / 24) * 100);
+        if (fillH < 5) fillH = 5;
+      }
+
+      // Build 24 segments for today, solid fill for others
+      let barInner = '';
+      if (isT) {
+        // 24 hour segments
+        const nowTime2 = new Date();
+        const fiveAM2 = new Date(); fiveAM2.setHours(5,0,0,0);
+        let hoursPassed2 = (nowTime2 - fiveAM2) / (1000*60*60);
+        if (hoursPassed2 < 0) hoursPassed2 = 0;
+        if (hoursPassed2 > 24) hoursPassed2 = 24;
+        const filledHours = Math.floor(hoursPassed2);
+        const partialPct = ((hoursPassed2 % 1) * 100).toFixed(0);
+
+        barInner = `<div style="width:100%;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:0.5px;padding:1px;">`;
+        for (let h = 23; h >= 0; h--) {
+          let op = '0.1';
+          if (h < filledHours) op = '1';
+          else if (h === filledHours) op = (partialPct/100).toFixed(2);
+          barInner += `<div style="width:100%;flex:1;background:${task.color};opacity:${op};border-radius:1px;min-height:1px;box-shadow:${h<filledHours?'0 0 2px '+task.color:'none'}"></div>`;
+        }
+        barInner += `</div>`;
+      } else {
+        barInner = `<div class="day-bar-fill ${fillCls}" style="height:${fillH}%"></div>`;
+      }
+
+      tlHTML += `
+        <div class="day-block">
+          <div class="day-num">${fmtShort(dStr)}</div>
+          <div class="day-bar-wrap" style="${isT?'border-color:'+task.color+';box-shadow:0 0 6px '+task.color+'55':''}">
+            ${barInner}
+          </div>
+          <div class="day-dot ${isT?'today':''}"></div>
+          <div class="day-fraction ${isT?'today':''}">${total}/${i}</div>
+        </div>`;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'task-card';
+    card.style.setProperty('--card-accent', task.color);
+    card.innerHTML = `
+      <div class="task-top">
+        <div class="task-name">${task.name}</div>
+        <div class="btn-row">
+          <button class="edit-btn" onclick="toggleEdit(${task.id})">✎ Edit</button>
+          <button class="delete-btn" onclick="deleteTask(${task.id})">✕ মুছো</button>
+        </div>
+      </div>
+      <div class="edit-panel" id="edit-${task.id}">
+        <div class="edit-panel-row">
+          <div class="field-group">
+            <label>শুরুর তারিখ</label>
+            <input type="date" id="es-${task.id}" value="${task.start}"/>
+          </div>
+          <div class="field-group">
+            <label>শেষের তারিখ</label>
+            <input type="date" id="ee-${task.id}" value="${task.end}"/>
+          </div>
+        </div>
+        <button class="edit-save-btn" onclick="saveEdit(${task.id})">✔ সেভ করো</button>
+      </div>
+      <div class="progress-section">
+        <div class="progress-label">
+          <div class="progress-pct">${remPct}%</div>
+          <div class="progress-status">${remain} দিন বাকি</div>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:${remPct}%;background:${task.color}"></div>
+        </div>
+        <div class="progress-track-complete">
+          <div class="progress-fill-complete" style="width:${100-remPct}%;background:${task.color}"></div>
+        </div>
+        <div class="complete-label">
+          <span class="complete-txt">সম্পন্ন</span>
+          <span class="complete-pct">${100-remPct}% done</span>
+        </div>
+      </div>
+      <div class="date-info">
+        <div class="date-box"><span class="val">${fmtDate(task.start)}</span><span class="lbl">শুরু</span></div>
+        <div class="date-box">
+          <span class="val">${passed}/${total}</span>
+          <span class="lbl">দিন গেছে</span>
+        </div>
+        <div class="date-box"><span class="val">${fmtDate(task.end)}</span><span class="lbl">শেষ</span></div>
+      </div>
+      <div class="timeline-label">দিন অনুযায়ী অগ্রগতি &nbsp;<span style="color:var(--muted);font-size:0.6em">👆 swipe করো</span></div>
+      <div class="timeline-wrapper">
+        <div class="timeline-scroll" id="tl-${task.id}"><div class="timeline-inner">${tlHTML}</div></div>
+        <div class="scroll-info">${total} দিন মোট</div>
+      </div>
+      <span class="urgency-badge ${urgClass}">${urgText}</span>
+      ${isDone?`<div class="done-overlay"><div class="done-icon">✅</div><div class="done-text">সময় শেষ!</div></div>`:''}
+    `;
+    container.appendChild(card);
+
+    setTimeout(() => {
+      const scroll = document.getElementById('tl-' + task.id);
+      const blocks = scroll ? [...scroll.querySelectorAll('.day-block')] : [];
+      const idx = blocks.findIndex(b => b.querySelector('.day-dot.today'));
+      if (idx >= 0 && scroll) scroll.scrollLeft = Math.max(0, idx * 36 - 60);
+      if (scroll) enableDragScroll(scroll);
+    }, 150);
+  });
+}
+
+renderTasks();
+setInterval(renderTasks, 60000);
+</script>
+<div class="footer">
+  <div class="footer-name">Md Abdul <span>Aziz</span></div>
+  <div class="footer-sub">Deadline Tracker • 2026</div>
+</div>
+
+</body>
+</html>
