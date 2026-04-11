@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="theme-color" content="#0a0a0f"/>
+<title>Deadline Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #1e1e2e;
+    --accent: #ff4d6d;
+    --accent2: #ff9a3c;
+    --accent3: #4dffb4;
+    --text: #e8e8f0;
+    --muted: #555570;
+    --card: #0f0f18;
+  }
+
+  *, *::before, *::after {
+    margin: 0; padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html { font-size: 16px; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    height: 100vh; height: 100dvh;
+    overflow: hidden;
+  }
+
+  .header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 50;
+    background: var(--bg);
+    display: flex;
+    justify-content: center;
+    padding: clamp(10px,3vw,14px) clamp(12px,4vw,20px) 0;
+  }
+
+  .header-inner {
+    width: 100%;
+    max-width: 476px;
+    background: var(--surface);
+    border-radius: clamp(12px,4vw,18px);
+    padding: clamp(10px,3vw,14px) clamp(14px,4vw,20px) clamp(8px,2vw,12px);
+  }
+
+  .add-panel-fixed {
+    position: fixed;
+    left: 0; right: 0;
+    z-index: 49;
+    background: var(--bg);
+    display: flex;
+    justify-content: center;
+    padding: clamp(6px,2vw,10px) clamp(12px,4vw,20px) clamp(8px,2vw,12px);
+  }
+
+  .add-panel-fixed .setup-panel {
+    width: 100%;
+    max-width: 476px;
+  }
+
+  .cards-scroll-area {
+    position: fixed;
+    left: 0; right: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+    scroll-snap-type: y mandatory;
+  }
+  .cards-scroll-area::-webkit-scrollbar { width: 3px; }
+  .cards-scroll-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+  #tasksContainer {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(12px,4vw,16px);
+    padding: 0 clamp(12px,4vw,20px) clamp(12px,3vw,20px);
+    max-width: 500px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .task-card {
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: clamp(12px,4vw,18px);
+    padding: clamp(14px,4vw,20px);
+    position: relative;
+    overflow: hidden;
+    animation: slideIn 0.35s ease;
+    scroll-snap-align: start;
+    /* height set by JS */
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -150px; left: -150px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(255,77,109,0.07) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -100px; right: -100px;
+    width: 350px; height: 350px;
+    background: radial-gradient(circle, rgba(77,255,180,0.05) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+  }
+  .header-logo {
+    text-align: center;
+    flex: 1;
+    min-width: 0;
+  }
+  .header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.5rem,6vw,2.4rem);
+    letter-spacing: clamp(3px,1.5vw,8px);
+    color: var(--text);
+    line-height: 1;
+  }
+  .header h1 span { color: var(--accent); }
+  .header p {
+    font-size: clamp(0.42rem,1.8vw,0.55rem);
+    color: var(--muted);
+    letter-spacing: clamp(1.5px,0.8vw,3px);
+    text-transform: uppercase;
+    margin-top: 3px;
+    text-align: center;
+  }
+
+  /* Analog Clock */
+  .analog-clock {
+    width: clamp(48px,12vw,64px);
+    height: clamp(48px,12vw,64px);
+    border-radius: 50%;
+    background: var(--card);
+    border: 2px solid var(--border);
+    position: relative;
+    flex-shrink: 0;
+    box-shadow: 0 0 12px rgba(255,77,109,0.1);
+  }
+  .analog-clock .center-dot {
+    position: absolute;
+    width: 5px; height: 5px;
+    background: var(--accent);
+    border-radius: 50%;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    z-index: 3;
+  }
+  .clock-hand {
+    position: absolute;
+    bottom: 50%;
+    left: 50%;
+    transform-origin: bottom center;
+    border-radius: 4px;
+  }
+  .hand-hour {
+    width: 2.5px; height: 28%;
+    background: var(--text);
+    margin-left: -1.25px;
+  }
+  .hand-min {
+    width: 2px; height: 38%;
+    background: var(--accent2);
+    margin-left: -1px;
+  }
+  .hand-sec {
+    width: 1px; height: 42%;
+    background: var(--accent);
+    margin-left: -0.5px;
+  }
+  .tick {
+    position: absolute;
+    width: 1px; height: 5px;
+    background: var(--muted);
+    top: 3px; left: 50%;
+    transform-origin: bottom center;
+  }
+  .tick.major { width: 2px; height: 7px; background: var(--border); }
+
+  /* Digital Clock */
+  .digital-clock {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    min-width: clamp(70px,18vw,100px);
+  }
+  .digital-time {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(1.1rem,4.5vw,1.6rem);
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 1px;
+    line-height: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+  }
+  .digital-time .colon {
+    color: var(--accent);
+    animation: blink 1s step-end infinite;
+  }
+  .ampm {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.5rem,2vw,0.65rem);
+    color: var(--accent2);
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin-left: 2px;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  .digital-secs {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.55rem,2vw,0.72rem);
+    color: var(--accent);
+    letter-spacing: 1px;
+    margin-top: 3px;
+  }
+  .digital-date {
+    font-size: clamp(0.42rem,1.6vw,0.52rem);
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  .setup-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 0;
+    background: none;
+  }
+
+  .add-btn-top {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    border: none;
+    border-radius: clamp(8px,3vw,12px);
+    padding: clamp(13px,4vw,16px);
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.75rem,3.5vw,0.9rem);
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    text-transform: uppercase;
+    touch-action: manipulation;
+  }
+  .add-btn-top:active { transform: scale(0.97); opacity: 0.85; }
+
+  .form-area {
+    display: none;
+    flex-direction: column;
+    gap: clamp(10px,3vw,16px);
+    margin-top: clamp(12px,3vw,16px);
+  }
+  .form-area.open { display: flex; }
+
+  label {
+    font-size: clamp(0.58rem,2.5vw,0.68rem);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 6px;
+  }
+  .field-group { display: flex; flex-direction: column; }
+
+  input[type="text"], input[type="date"] {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: clamp(7px,2vw,10px);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.8rem,3.5vw,0.95rem);
+    padding: clamp(11px,3.5vw,14px) clamp(12px,3.5vw,16px);
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+    -webkit-appearance: none;
+  }
+  input:focus { border-color: var(--accent); }
+  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(8px,2.5vw,12px); }
+
+  .color-row { display: flex; gap: clamp(6px,2vw,10px); flex-wrap: wrap; }
+  .color-dot {
+    width: clamp(26px,7vw,32px);
+    height: clamp(26px,7vw,32px);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2.5px solid transparent;
+    transition: transform 0.15s, border-color 0.15s;
+    touch-action: manipulation;
+  }
+  .color-dot.active { border-color: #fff; transform: scale(1.2); }
+
+  .submit-btn {
+    background: var(--accent3);
+    color: #000;
+    border: none;
+    border-radius: clamp(8px,3vw,12px);
+    padding: clamp(12px,4vw,15px);
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.75rem,3vw,0.88rem);
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    touch-action: manipulation;
+  }
+  .submit-btn:active { transform: scale(0.97); }
+
+  .empty-state {
+    text-align: center;
+    padding: clamp(30px,10vw,50px) 20px;
+    color: var(--muted);
+  }
+  .empty-state .icon { font-size: clamp(2.5rem,10vw,3.5rem); margin-bottom: 12px; }
+  .empty-state p { font-size: clamp(0.75rem,3vw,0.88rem); letter-spacing: 1px; line-height: 1.7; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .task-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-accent, var(--accent));
+  }
+
+  .task-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: clamp(10px,3vw,16px);
+    gap: 8px;
+  }
+  .task-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.1rem,5vw,1.5rem);
+    letter-spacing: 3px;
+    line-height: 1.1;
+    word-break: break-word;
+    flex: 1;
+  }
+  .delete-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: clamp(4px,1.5vw,7px) clamp(8px,2.5vw,12px);
+    font-size: clamp(0.62rem,2.5vw,0.75rem);
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+    touch-action: manipulation;
+  }
+  .delete-btn:active { border-color: var(--accent); color: var(--accent); }
+
+  .progress-section { margin-bottom: clamp(10px,3vw,16px); }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .progress-pct {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.9rem,8vw,2.8rem);
+    line-height: 1;
+    color: var(--card-accent, var(--accent));
+  }
+  .progress-status {
+    font-size: clamp(0.58rem,2.5vw,0.68rem);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .progress-track {
+    height: clamp(8px,2.5vw,12px);
+    background: var(--card);
+    border-radius: 99px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 1s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 2.5s infinite;
+  }
+  @keyframes shimmer { to { left: 200%; } }
+
+  .progress-track-complete {
+    height: clamp(8px,2.5vw,12px);
+    background: var(--card);
+    border-radius: 99px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin-top: clamp(5px,1.5vw,8px);
+  }
+  .progress-fill-complete {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 1s ease;
+    position: relative;
+    overflow: hidden;
+    opacity: 0.45;
+  }
+  .progress-fill-complete::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 2.5s infinite;
+  }
+  .complete-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: clamp(4px,1vw,6px);
+  }
+  .complete-txt {
+    font-size: clamp(0.52rem,2vw,0.62rem);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .complete-pct {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.62rem,2.5vw,0.72rem);
+    color: var(--card-accent, var(--accent));
+    opacity: 0.7;
+  }
+
+  .date-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: clamp(6px,2vw,10px);
+    margin-bottom: clamp(10px,3vw,16px);
+  }
+  .date-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: clamp(7px,2vw,10px);
+    padding: clamp(8px,2.5vw,12px) 4px;
+    text-align: center;
+  }
+  .date-box .val {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.68rem,3vw,0.85rem);
+    color: var(--text);
+    font-weight: 700;
+    display: block;
+  }
+  .date-box .lbl {
+    font-size: clamp(0.48rem,2vw,0.58rem);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 3px;
+    display: block;
+  }
+
+  .timeline-label {
+    font-size: clamp(0.52rem,2vw,0.65rem);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: clamp(6px,2vw,10px);
+  }
+  .timeline-wrapper { position: relative; }
+  .timeline-scroll {
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+    -webkit-overflow-scrolling: touch;
+    cursor: grab;
+  }
+  .timeline-scroll.dragging { cursor: grabbing; }
+  .timeline-scroll::-webkit-scrollbar { height: 4px; }
+  .timeline-scroll::-webkit-scrollbar-track { background: transparent; }
+  .timeline-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+  .scroll-info {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.5rem,2vw,0.6rem);
+    color: var(--muted);
+    text-align: right;
+    margin-top: 5px;
+  }
+  .timeline-inner {
+    display: flex;
+    gap: clamp(3px,1vw,5px);
+    min-width: max-content;
+    padding-bottom: 2px;
+  }
+  .day-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: clamp(28px,8vw,40px);
+  }
+  .day-num {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.42rem,1.8vw,0.55rem);
+    color: var(--muted);
+  }
+  .day-bar-wrap {
+    width: clamp(20px,6vw,28px);
+    height: clamp(38px,12vw,54px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+  .day-bar-fill {
+    width: 100%;
+    background: var(--card-accent, var(--accent));
+    border-radius: 2px;
+    opacity: 0.2;
+  }
+  .day-bar-fill.passed { opacity: 1; }
+  .day-bar-fill.today  { opacity: 1; box-shadow: 0 0 8px var(--card-accent, var(--accent)); }
+  .day-dot {
+    width: clamp(4px,1.5vw,6px);
+    height: clamp(4px,1.5vw,6px);
+    border-radius: 50%;
+    background: var(--border);
+  }
+  .day-dot.today { background: var(--card-accent, var(--accent)); }
+  .day-fraction {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.4rem,1.6vw,0.52rem);
+    color: var(--muted);
+  }
+  .day-fraction.today { color: var(--card-accent, var(--accent)); }
+
+  .urgency-badge {
+    display: inline-block;
+    padding: clamp(3px,1vw,5px) clamp(8px,3vw,12px);
+    border-radius: 99px;
+    font-size: clamp(0.52rem,2.2vw,0.65rem);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-top: clamp(10px,3vw,14px);
+  }
+  .urgency-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 4px;
+    margin-top: clamp(10px,3vw,14px);
+    width: 100%;
+  }
+  .urgency-item {
+    flex: 1;
+    text-align: center;
+    padding: clamp(4px,1.5vw,6px) 2px;
+    border-radius: 99px;
+    font-size: clamp(0.48rem,1.8vw,0.58rem);
+    letter-spacing: 1px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .urgency-item.active {
+    background: color-mix(in srgb, var(--uc) 15%, transparent);
+    border-color: var(--uc);
+    color: var(--uc);
+    filter: none;
+    opacity: 1;
+  }
+  .urgency-item.dim {
+    background: transparent;
+    border-color: rgba(255,255,255,0.08);
+    color: var(--muted);
+    filter: blur(0.2px);
+    opacity: 0.6;
+  }
+  .done-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 13px; height: 13px;
+    border-radius: 50%;
+    background: #555570;
+    color: #000;
+    font-size: 0.45rem;
+    font-weight: 900;
+    margin-right: 2px;
+    vertical-align: middle;
+    line-height: 1;
+  }
+  .urgency-item.active .done-circle {
+    background: var(--uc);
+  } background: rgba(77,255,180,0.12); color: var(--accent3); border: 1px solid rgba(77,255,180,0.3); }
+  .urgency-warn   { background: rgba(255,154,60,0.12);  color: var(--accent2); border: 1px solid rgba(255,154,60,0.3); }
+  .urgency-danger { background: rgba(255,77,109,0.12);  color: var(--accent);  border: 1px solid rgba(255,77,109,0.3); }
+  .urgency-done   { background: rgba(150,150,200,0.08); color: var(--muted);   border: 1px solid var(--border); }
+
+  .btn-row { display: flex; gap: 6px; flex-shrink: 0; }
+  .edit-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: clamp(4px,1.5vw,7px) clamp(8px,2.5vw,12px);
+    font-size: clamp(0.62rem,2.5vw,0.75rem);
+    transition: all 0.2s;
+    white-space: nowrap;
+    touch-action: manipulation;
+  }
+  .edit-btn:active { border-color: var(--accent2); color: var(--accent2); }
+
+  .edit-panel {
+    display: none;
+    flex-direction: column;
+    gap: clamp(10px,3vw,14px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: clamp(8px,3vw,12px);
+    padding: clamp(12px,3.5vw,16px);
+    margin-bottom: clamp(10px,3vw,14px);
+    animation: slideIn 0.25s ease;
+  }
+  .edit-panel.open { display: flex; }
+  .edit-panel-row { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(8px,2.5vw,12px); }
+  .edit-save-btn {
+    background: var(--accent2);
+    color: #000;
+    border: none;
+    border-radius: clamp(7px,2.5vw,10px);
+    padding: clamp(10px,3vw,13px);
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(0.72rem,3vw,0.85rem);
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .edit-save-btn:active { transform: scale(0.97); }
+
+  .done-overlay {
+    position: absolute; inset: 0;
+    background: rgba(10,10,15,0.82);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: clamp(12px,4vw,18px);
+    backdrop-filter: blur(3px);
+  }
+  .done-overlay .done-icon { font-size: clamp(2rem,8vw,2.8rem); }
+  .done-overlay .done-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1rem,4vw,1.3rem);
+    letter-spacing: 4px;
+    margin-top: 6px;
+    color: var(--accent3);
+  }
+  /* Day Detail Modal */
+  .modal-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    z-index: 999;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    background: rgba(5,5,10,0.7);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+  }
+  .modal-backdrop.open { display: flex; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+  .modal-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 360px;
+    padding: 20px;
+    position: relative;
+    animation: popUp 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  @keyframes popUp { from{opacity:0;transform:scale(0.85)} to{opacity:1;transform:scale(1)} }
+
+  .modal-card::before {
+    content:'';
+    position:absolute;
+    top:0;left:0;right:0;
+    height:3px;
+    background: var(--modal-color, var(--accent));
+    border-radius:20px 20px 0 0;
+  }
+  .modal-close {
+    position:absolute;
+    top:14px; right:14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    touch-action: manipulation;
+  }
+  .modal-date-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 4px;
+    color: var(--modal-color, var(--accent));
+    line-height: 1;
+    margin-bottom: 2px;
+  }
+  .modal-day-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .modal-task-name {
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  /* Hour stats row */
+  .modal-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .modal-stat {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 6px;
+    text-align: center;
+  }
+  .modal-stat .sv {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    display: block;
+  }
+  .modal-stat .sl {
+    font-size: 0.5rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 3px;
+    display: block;
+  }
+  .modal-stat.highlight .sv { color: var(--modal-color, var(--accent)); }
+
+  .hour-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+  .hour-section {
+    border-radius: 8px;
+    padding: 8px 4px;
+    text-align: center;
+    position: relative;
+    background: var(--card) !important;
+  }
+  .hour-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    padding: 2px;
+    background: conic-gradient(
+      var(--sec-color) calc(var(--pct) * 1%),
+      #1e1e2e calc(var(--pct) * 1%)
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .hour-section.future { opacity: 0.3; }
+  .hour-section .hs-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.5rem;
+    color: var(--sec-color);
+    display: block;
+    font-weight: 700;
+  }
+  .hour-section .hs-range {
+    font-size: 0.42rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: 2px;
+    display: block;
+    letter-spacing: 0.5px;
+  }
+  .hour-section .hs-pct {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: rgba(255,255,255,0.9);
+    margin-top: 3px;
+    display: block;
+    font-weight: 700;
+  }
+  .hour-section.future .hs-label { color: var(--muted); }
+
+  /* Overall % bar */
+  .modal-pct-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .modal-pct-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: var(--modal-color, var(--accent));
+    line-height:1;
+  }
+  .modal-pct-lbl {
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .modal-bar-track {
+    height: 8px;
+    background: var(--card);
+    border-radius: 99px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .modal-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--modal-color, var(--accent));
+    transition: width 0.8s ease;
+  }
+
+  .day-block { cursor: pointer; }
+  .day-block:active .day-bar-wrap { transform: scale(0.93); }
+</style>
+<body>
+
+<div class="header" id="mainHeader">
+  <div class="header-inner">
+    <div class="header-top">
+      <div class="analog-clock" id="analogClock">
+        <div class="center-dot"></div>
+        <div class="clock-hand hand-hour" id="handHour"></div>
+        <div class="clock-hand hand-min"  id="handMin"></div>
+        <div class="clock-hand hand-sec"  id="handSec"></div>
+      </div>
+      <div class="header-logo">
+        <h1>DEAD<span>LINE</span></h1>
+        <p>Countdown Tracker</p>
+      </div>
+      <div class="digital-clock">
+        <div class="digital-time">
+          <span id="dHour">00</span><span class="colon">:</span><span id="dMin">00</span><span class="ampm" id="dAmPm">AM</span>
+        </div>
+        <div class="digital-secs"><span id="dSec">00</span> sec</div>
+        <div class="digital-date" id="dDate"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="add-panel-fixed" id="addPanel">
+  <div class="setup-panel">
+    <button class="add-btn-top" onclick="toggleForm()">+ নতুন Deadline যোগ করো</button>
+    <div class="form-area" id="formArea">
+      <div class="field-group">
+        <label>কাজের নাম</label>
+        <input type="text" id="taskName" placeholder="যেমন: Project Submit"/>
+      </div>
+      <div class="form-row">
+        <div class="field-group">
+          <label>শুরুর তারিখ</label>
+          <input type="date" id="startDate"/>
+        </div>
+        <div class="field-group">
+          <label>শেষের তারিখ</label>
+          <input type="date" id="endDate"/>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>রঙ বেছে নাও</label>
+        <div class="color-row" id="colorRow"></div>
+      </div>
+      <button class="submit-btn" onclick="addTask()">✔ যোগ করো</button>
+    </div>
+  </div>
+</div>
+
+<div class="cards-scroll-area" id="cardsScrollArea">
+  <div id="tasksContainer">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">⏳</div>
+      <p>কোনো Deadline নেই এখনো<br/>উপরে + বাটন চাপো</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .footer {
+    width: 100%;
+    text-align: center;
+    padding: 8px 20px env(safe-area-inset-bottom, 8px);
+    border-top: 1px solid var(--border);
+    position: fixed;
+    bottom: 0; left: 0;
+    background: var(--bg);
+    z-index: 99;
+    flex-shrink: 0;
+  }
+  .footer-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    color: var(--text);
+  }
+  .footer-name span { color: var(--accent); }
+  .footer-sub {
+    font-size: 0.45rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+</style>
+
+<script>
+// ── LAYOUT POSITIONING ──
+function positionLayout() {
+  const header    = document.getElementById('mainHeader');
+  const addPanel  = document.getElementById('addPanel');
+  const scrollArea= document.getElementById('cardsScrollArea');
+  const footer    = document.querySelector('.footer');
+
+  const hH = header.offsetHeight;
+  const aH = addPanel.offsetHeight;
+  const fH = footer ? footer.offsetHeight : 0;
+  const vh = window.innerHeight;
+
+  addPanel.style.top   = hH + 'px';
+  scrollArea.style.top = (hH + aH) + 'px';
+  scrollArea.style.bottom = fH + 'px';
+
+  // Match card width exactly to header-inner
+  const headerInner = document.querySelector('.header-inner');
+  const rect = headerInner.getBoundingClientRect();
+  const left = rect.left;
+  const w = rect.width;
+
+  const container = document.getElementById('tasksContainer');
+  container.style.width = w + 'px';
+  container.style.padding = '0 0 clamp(12px,3vw,20px) 0';
+  container.style.marginLeft = left + 'px';
+  container.style.marginRight = left + 'px';
+  container.style.maxWidth = 'none';
+
+  const setupPanel = document.querySelector('.add-panel-fixed .setup-panel');
+  if (setupPanel) setupPanel.style.width = w + 'px';
+
+  const gap = 12;
+  const cardH = vh - hH - aH - fH - gap;
+  document.querySelectorAll('.task-card').forEach(c => {
+    c.style.height = cardH + 'px';
+    c.style.minHeight = 'unset';
+    c.style.overflowY = 'auto';
+    c.style.overflowX = 'hidden';
+    c.style.flexShrink = '0';
+  });
+}
+
+window.addEventListener('load',   positionLayout);
+window.addEventListener('resize', positionLayout);
+
+// ── CLOCK ──
+function updateClock() {
+  const now = new Date();
+  const h24 = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+  const ampm = h24 >= 12 ? 'PM' : 'AM';
+  const h12  = h24 % 12 || 12;
+
+  // Analog (uses 24h for correct rotation)
+  const secDeg  = s * 6;
+  const minDeg  = m * 6 + s * 0.1;
+  const hourDeg = (h24 % 12) * 30 + m * 0.5;
+  document.getElementById('handSec').style.transform  = `rotate(${secDeg}deg)`;
+  document.getElementById('handMin').style.transform  = `rotate(${minDeg}deg)`;
+  document.getElementById('handHour').style.transform = `rotate(${hourDeg}deg)`;
+
+  // Digital
+  const pad = n => String(n).padStart(2,'0');
+  document.getElementById('dHour').textContent  = pad(h12);
+  document.getElementById('dMin').textContent   = pad(m);
+  document.getElementById('dSec').textContent   = pad(s);
+  document.getElementById('dAmPm').textContent  = ampm;
+
+  // Date
+  const days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('dDate').textContent =
+    `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// Add hour ticks to analog clock
+(function() {
+  const clock = document.getElementById('analogClock');
+  const size  = clock.offsetWidth || 64;
+  for (let i = 0; i < 12; i++) {
+    const tick = document.createElement('div');
+    tick.className = 'tick' + (i % 3 === 0 ? ' major' : '');
+    tick.style.transform = `rotate(${i*30}deg) translateX(-50%)`;
+    clock.appendChild(tick);
+  }
+})();
+
+// ── TASKS ──
+const COLORS = ['#ff4d6d','#ff9a3c','#4dffb4','#4db8ff','#c77dff','#ffeb3b','#ff6b6b','#00e5ff'];
+let selectedColor = COLORS[0];
+let tasks = JSON.parse(localStorage.getItem('dl_tasks_v2') || '[]');
+
+const today = new Date();
+const todayStr = today.toISOString().split('T')[0];
+document.getElementById('startDate').value = todayStr;
+const d7 = new Date(today); d7.setDate(d7.getDate() + 7);
+document.getElementById('endDate').value = d7.toISOString().split('T')[0];
+
+const cr = document.getElementById('colorRow');
+COLORS.forEach((c, i) => {
+  const dot = document.createElement('div');
+  dot.className = 'color-dot' + (i === 0 ? ' active' : '');
+  dot.style.background = c;
+  dot.onclick = () => {
+    document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+    dot.classList.add('active');
+    selectedColor = c;
+  };
+  cr.appendChild(dot);
+});
+
+function toggleForm() {
+  document.getElementById('formArea').classList.toggle('open');
+  setTimeout(positionLayout, 50);
+}
+
+function addTask() {
+  const name  = document.getElementById('taskName').value.trim();
+  const start = document.getElementById('startDate').value;
+  const end   = document.getElementById('endDate').value;
+  if (!name)      { alert('কাজের নাম দাও!'); return; }
+  if (!end)       { alert('শেষের তারিখ দাও!'); return; }
+  if (start >= end){ alert('শেষের তারিখ শুরুর পরে হওয়া দরকার!'); return; }
+  tasks.unshift({ id: Date.now(), name, start, end, color: selectedColor });
+  saveTasks(); renderTasks();
+  document.getElementById('taskName').value = '';
+  document.getElementById('formArea').classList.remove('open');
+}
+
+function enableDragScroll(el) {
+  let isDown = false, startX, scrollLeft;
+  el.addEventListener('mousedown', e => {
+    isDown = true; el.classList.add('dragging');
+    startX = e.pageX - el.offsetLeft;
+    scrollLeft = el.scrollLeft;
+  });
+  el.addEventListener('mouseleave', () => { isDown = false; el.classList.remove('dragging'); });
+  el.addEventListener('mouseup', () => { isDown = false; el.classList.remove('dragging'); });
+  el.addEventListener('mousemove', e => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    el.scrollLeft = scrollLeft - (x - startX) * 1.2;
+  });
+}
+
+// ── DAY MODAL ──
+const SECTION_COLORS = ['#4db8ff','#ffeb3b','#ff9a3c','#4dffb4','#c77dff','#ff4d6d'];
+const SECTION_NAMES  = ['ভোর','সকাল','দুপুর','বিকাল','সন্ধ্যা','রাত'];
+const SECTION_RANGES = ['৫-৯','৯-১২','১২-৪','৪-৬','৬-৯','৯-৫'];
+const SECTION_START  = [5, 9, 12, 16, 18, 21];
+const SECTION_END    = [9, 12, 16, 18, 21, 29]; // 29 = next day 5am
+
+function openDayModal(dateStr, taskName, color, isToday, isPast) {
+  const now     = new Date();
+  let nowHour   = now.getHours() + now.getMinutes()/60;
+  // Shift: treat day as 5am→5am (next day)
+  // Convert nowHour to shifted hour (0=5am)
+  let shiftedNow = nowHour - 5;
+  if (shiftedNow < 0) shiftedNow += 24;
+  const dayLength = 24; // still 24h total
+
+  let hoursDone, hoursLeft, dayPct;
+  if (isPast) {
+    hoursDone = 24; hoursLeft = 0; dayPct = 100;
+  } else if (isToday) {
+    hoursDone = Math.min(24, Math.round(shiftedNow * 10)/10);
+    hoursLeft = Math.max(0, Math.round((24 - shiftedNow)*10)/10);
+    dayPct    = Math.round((shiftedNow / 24) * 100);
+  } else {
+    hoursDone = 0; hoursLeft = 24; dayPct = 0;
+  }
+
+  const modal = document.getElementById('dayModal');
+  const card  = document.getElementById('modalCard');
+  card.style.setProperty('--modal-color', color);
+
+  // Full Bengali date
+  const d = new Date(dateStr + 'T00:00:00');
+  const bnDays   = ['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'];
+  const bnMonths = ['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+  document.getElementById('mDateTitle').textContent =
+    `${d.getDate()} ${bnMonths[d.getMonth()]}`;
+  document.getElementById('mDayName').textContent =
+    bnDays[d.getDay()];
+  document.getElementById('mTaskName').textContent = taskName;
+
+  // Stats
+  document.getElementById('mStats').innerHTML = `
+    <div class="modal-stat highlight">
+      <span class="sv">${hoursDone}h</span>
+      <span class="sl">সম্পন্ন</span>
+    </div>
+    <div class="modal-stat">
+      <span class="sv">${hoursLeft}h</span>
+      <span class="sl">বাকি</span>
+    </div>
+    <div class="modal-stat">
+      <span class="sv">${dayPct}%</span>
+      <span class="sl">% Done</span>
+    </div>
+  `;
+
+  // 6 sections starting from 5am
+  let gridHTML = '';
+  for (let s = 0; s < 6; s++) {
+    const sStart = SECTION_START[s];
+    const sEnd   = SECTION_END[s];
+    const sLen   = sEnd > sStart ? sEnd - sStart : (24 - sStart) + (sEnd - 5);
+
+    let state = 'future', secPct = 0;
+
+    if (isPast) {
+      state = 'done'; secPct = 100;
+    } else if (isToday) {
+      // compare using real hour
+      const sRealEnd = sEnd > 24 ? sEnd - 24 : sEnd;
+      if (nowHour >= (sEnd <= 5 ? 24 : sEnd) || (s === 5 && nowHour >= 21)) {
+        // fully done sections
+        if (
+          (s < 5 && nowHour >= sEnd) ||
+          (s === 5 && (nowHour >= 21 || nowHour < 5))
+        ) { state = 'done'; secPct = 100; }
+      }
+      if (nowHour >= sStart && nowHour < (s === 5 ? 29 : sEnd)) {
+        if (s < 5) {
+          if (nowHour >= sStart && nowHour < sEnd) {
+            state = 'active';
+            secPct = Math.round(((nowHour - sStart) / sLen) * 100);
+          } else if (nowHour >= sEnd) {
+            state = 'done'; secPct = 100;
+          }
+        }
+      }
+      // night section (21-5 next day)
+      if (s === 5) {
+        if (nowHour >= 21) { state = 'active'; secPct = Math.round(((nowHour-21)/8)*100); }
+        else if (nowHour < 5) { state = 'active'; secPct = Math.round(((nowHour+3)/8)*100); }
+        else { state = 'future'; secPct = 0; }
+      }
+    }
+
+    const bg = SECTION_COLORS[s];
+    gridHTML += `
+      <div class="hour-section ${state}" style="--sec-color:${bg}; --pct:${secPct}">
+        <span class="hs-label">${SECTION_NAMES[s]}</span>
+        <span class="hs-range">${SECTION_RANGES[s]}</span>
+        <span class="hs-pct">${secPct}%</span>
+      </div>`;
+  }
+  document.getElementById('mHourGrid').innerHTML = gridHTML;
+
+  document.getElementById('mPctNum').textContent  = dayPct + '%';
+  document.getElementById('mBarFill').style.width = dayPct + '%';
+  document.getElementById('mBarFill').style.background = color;
+
+  modal.classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('dayModal')) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById('dayModal').classList.remove('open');
+}
+
+function toggleEdit(id) {
+  const panel = document.getElementById('edit-' + id);
+  if (panel) panel.classList.toggle('open');
+}
+
+function saveEdit(id) {
+  const start = document.getElementById('es-' + id).value;
+  const end   = document.getElementById('ee-' + id).value;
+  if (!start || !end) { alert('তারিখ দাও!'); return; }
+  if (start >= end)   { alert('শেষের তারিখ শুরুর পরে হওয়া দরকার!'); return; }
+  const task = tasks.find(t => t.id === id);
+  if (task) { task.start = start; task.end = end; }
+  saveTasks(); renderTasks();
+}
+
+function deleteTask(id) {
+  if (!confirm('এই Deadline মুছে দেবো?')) return;
+  tasks = tasks.filter(t => t.id !== id);
+  saveTasks(); renderTasks();
+}
+
+function saveTasks() { localStorage.setItem('dl_tasks_v2', JSON.stringify(tasks)); }
+
+function daysBetween(a, b) {
+  return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00')) / 86400000);
+}
+function fmtDate(str) {
+  const d = new Date(str+'T00:00:00');
+  return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+}
+function fmtShort(str) {
+  const d = new Date(str+'T00:00:00');
+  return `${d.getDate()}/${d.getMonth()+1}`;
+}
+
+function renderTasks() {
+  const container = document.getElementById('tasksContainer');
+  container.querySelectorAll('.task-card').forEach(c => c.remove());
+  const empty = document.getElementById('emptyState');
+  if (tasks.length === 0) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  const now = new Date().toISOString().split('T')[0];
+
+  tasks.forEach(task => {
+    const total  = daysBetween(task.start, task.end);
+    const passed = Math.max(0, Math.min(total, daysBetween(task.start, now)));
+    const remain = Math.max(0, total - passed);
+    const remPct = Math.round(((total - passed) / total) * 100);
+    const isDone = now >= task.end;
+
+    let urgClass, urgText;
+    if (isDone)          { urgClass='urgency-done';   urgText='✓ সময় শেষ'; }
+    else if (remPct > 60){ urgClass='urgency-safe';   urgText='🟢 নিরাপদ'; }
+    else if (remPct > 25){ urgClass='urgency-warn';   urgText='🟡 সাবধান'; }
+    else                 { urgClass='urgency-danger';  urgText='🔴 বিপদ!'; }
+
+    let tlHTML = '';
+    for (let i = 1; i <= total; i++) {
+      const d = new Date(task.start+'T00:00:00');
+      d.setDate(d.getDate() + i);
+      const dStr   = d.toISOString().split('T')[0];
+      const isT    = dStr === now;
+      const isPast = dStr < now;
+
+      let fillH = 8;
+      let fillCls = '';
+
+      if (isPast) {
+        fillH = 100;
+        fillCls = 'passed';
+      } else if (isT) {
+        fillCls = 'today';
+        // Calculate hours passed since 5 AM
+        const nowTime = new Date();
+        const fiveAM = new Date();
+        fiveAM.setHours(5, 0, 0, 0);
+        let hoursPassed = (nowTime - fiveAM) / (1000 * 60 * 60);
+        if (hoursPassed < 0) hoursPassed = 0;
+        if (hoursPassed > 24) hoursPassed = 24;
+        fillH = Math.round((hoursPassed / 24) * 100);
+        if (fillH < 5) fillH = 5;
+      }
+
+      // Build 24 segments for today, solid fill for others
+      let barInner = '';
+      if (isT) {
+        // 24 hour segments
+        const nowTime2 = new Date();
+        const fiveAM2 = new Date(); fiveAM2.setHours(5,0,0,0);
+        let hoursPassed2 = (nowTime2 - fiveAM2) / (1000*60*60);
+        if (hoursPassed2 < 0) hoursPassed2 = 0;
+        if (hoursPassed2 > 24) hoursPassed2 = 24;
+        const filledHours = Math.floor(hoursPassed2);
+        const partialPct = ((hoursPassed2 % 1) * 100).toFixed(0);
+
+        barInner = `<div style="width:100%;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:0.5px;padding:1px;">`;
+        for (let h = 23; h >= 0; h--) {
+          let op = '0.1';
+          if (h < filledHours) op = '1';
+          else if (h === filledHours) op = (partialPct/100).toFixed(2);
+          barInner += `<div style="width:100%;flex:1;background:${task.color};opacity:${op};border-radius:1px;min-height:1px;box-shadow:${h<filledHours?'0 0 2px '+task.color:'none'}"></div>`;
+        }
+        barInner += `</div>`;
+      } else {
+        barInner = `<div class="day-bar-fill ${fillCls}" style="height:${fillH}%"></div>`;
+      }
+
+      tlHTML += `
+        <div class="day-block" onclick="openDayModal('${dStr}','${task.name}','${task.color}',${isT},${isPast})">
+          <div class="day-num">${fmtShort(dStr)}</div>
+          <div class="day-bar-wrap" style="${isT?'border-color:'+task.color+';box-shadow:0 0 6px '+task.color+'55':''}">
+            ${barInner}
+          </div>
+          <div class="day-dot ${isT?'today':''}"></div>
+          <div class="day-fraction ${isT?'today':''}">${total}/${i}</div>
+        </div>`;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'task-card';
+    card.style.setProperty('--card-accent', task.color);
+    card.innerHTML = `
+      <div class="task-top">
+        <div class="task-name">${task.name}</div>
+        <div class="btn-row">
+          <button class="edit-btn" onclick="toggleEdit(${task.id})">✎ Edit</button>
+          <button class="delete-btn" onclick="deleteTask(${task.id})">✕ মুছো</button>
+        </div>
+      </div>
+      <div class="edit-panel" id="edit-${task.id}">
+        <div class="edit-panel-row">
+          <div class="field-group">
+            <label>শুরুর তারিখ</label>
+            <input type="date" id="es-${task.id}" value="${task.start}"/>
+          </div>
+          <div class="field-group">
+            <label>শেষের তারিখ</label>
+            <input type="date" id="ee-${task.id}" value="${task.end}"/>
+          </div>
+        </div>
+        <button class="edit-save-btn" onclick="saveEdit(${task.id})">✔ সেভ করো</button>
+      </div>
+      <div class="progress-section">
+        <div class="progress-label">
+          <div class="progress-pct">${remPct}%</div>
+          <div class="progress-status">${remain} দিন বাকি</div>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width:${remPct}%;background:${task.color}"></div>
+        </div>
+        <div class="progress-track-complete">
+          <div class="progress-fill-complete" style="width:${100-remPct}%;background:${task.color}"></div>
+        </div>
+        <div class="complete-label">
+          <span class="complete-txt">সম্পন্ন</span>
+          <span class="complete-pct">${100-remPct}% done</span>
+        </div>
+      </div>
+      <div class="date-info">
+        <div class="date-box"><span class="val">${fmtDate(task.start)}</span><span class="lbl">শুরু</span></div>
+        <div class="date-box">
+          <span class="val">${passed}/${total}</span>
+          <span class="lbl">দিন গেছে</span>
+        </div>
+        <div class="date-box"><span class="val">${fmtDate(task.end)}</span><span class="lbl">শেষ</span></div>
+      </div>
+      <div class="timeline-label">দিন অনুযায়ী অগ্রগতি &nbsp;<span style="color:var(--muted);font-size:0.6em">👆 swipe করো</span></div>
+      <div class="timeline-wrapper">
+        <div class="timeline-scroll" id="tl-${task.id}"><div class="timeline-inner">${tlHTML}</div></div>
+        <div class="scroll-info">${total} দিন মোট</div>
+      </div>
+      <div class="urgency-row">
+        <div class="urgency-item ${!isDone&&remPct>60?'active':'dim'}" style="--uc:#4dffb4">🟢 নিরাপদ</div>
+        <div class="urgency-item ${!isDone&&remPct>25&&remPct<=60?'active':'dim'}" style="--uc:#ff9a3c">🟡 সাবধান</div>
+        <div class="urgency-item ${!isDone&&remPct<=25?'active':'dim'}" style="--uc:#ff4d6d">🔴 বিপদ</div>
+        <div class="urgency-item ${isDone?'active':'dim'}" style="--uc:#555570"><span class="done-circle">✓</span> সময় শেষ</div>
+      </div>
+      ${isDone?`<div class="done-overlay"><div class="done-icon">✅</div><div class="done-text">সময় শেষ!</div></div>`:''}
+    `;
+    container.appendChild(card);
+
+    setTimeout(() => {
+      const scroll = document.getElementById('tl-' + task.id);
+      const blocks = scroll ? [...scroll.querySelectorAll('.day-block')] : [];
+      const idx = blocks.findIndex(b => b.querySelector('.day-dot.today'));
+      if (idx >= 0 && scroll) scroll.scrollLeft = Math.max(0, idx * 36 - 60);
+      if (scroll) enableDragScroll(scroll);
+    }, 150);
+  });
+}
+
+renderTasks();
+setTimeout(positionLayout, 50);
+setInterval(() => { renderTasks(); setTimeout(positionLayout, 50); }, 60000);
+</script>
+<!-- Day Detail Modal -->
+<div class="modal-backdrop" id="dayModal" onclick="closeModal(event)">
+  <div class="modal-card" id="modalCard">
+    <button class="modal-close" onclick="closeModalDirect()">✕ বন্ধ</button>
+    <div class="modal-date-title" id="mDateTitle"></div>
+    <div class="modal-day-name" id="mDayName"></div>
+    <div class="modal-task-name" id="mTaskName"></div>
+
+    <div class="modal-stats" id="mStats"></div>
+
+    <div class="hour-grid-label" style="font-family:'Inter',sans-serif;font-size:0.58rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">২৪ ঘণ্টার বিবরণ (প্রতি ৪ ঘণ্টা)</div>
+    <div class="hour-grid" id="mHourGrid"></div>
+
+    <div class="modal-pct-row">
+      <div class="modal-pct-num" id="mPctNum">0%</div>
+      <div class="modal-pct-lbl">দিন সম্পন্ন</div>
+    </div>
+    <div class="modal-bar-track">
+      <div class="modal-bar-fill" id="mBarFill" style="width:0%"></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-name">Md Abdul <span>Aziz</span></div>
+  <div class="footer-sub">Deadline Tracker • 2026</div>
+</div>
+
+</body>
+</html>
