@@ -910,6 +910,12 @@
   .day-block { cursor: pointer; }
   .day-block:active .day-bar-wrap { transform: scale(0.93); }
 </style>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
 <body>
 
 <div class="header" id="mainHeader">
