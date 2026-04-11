@@ -911,11 +911,7 @@
   .day-block:active .day-bar-wrap { transform: scale(0.93); }
 </style>
 
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
-}
-</script>
+
 <body>
 
 <div class="header" id="mainHeader">
@@ -1498,6 +1494,12 @@ setInterval(() => { renderTasks(); setTimeout(positionLayout, 50); }, 60000);
   <div class="footer-name">Md Abdul <span>Aziz</span></div>
   <div class="footer-sub">Deadline Tracker • 2026</div>
 </div>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
 
 </body>
 </html>
